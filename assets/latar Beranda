@@ -1,0 +1,8 @@
+<div class="relative overflow-hidden bg-[url('/images/kelas-kuliah.jpg')] bg-cover bg-center p-6 rounded-2xl text-white">
+  <div class="absolute inset-0 bg-black/40"></div>
+  <div class="relative z-10">
+    <span class="bg-white/20 px-3 py-1 rounded-full text-xs">Selamat datang di MODULAB</span>
+    <h1 class="text-2xl font-bold mt-2">MODULAB</h1>
+    <p class="text-sm opacity-90">Praktikum Fisika Mekanika dan Panas</p>
+  </div>
+</div>

@@ -1,0 +1,732 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MODULAB - Portal Pembelajaran & Persiapan Asisten Laboran</title>
+    <link rel="icon" type="image/png" href="/images/modulab-logo.png">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #10283D url('/images/page-background.png') center / cover fixed no-repeat;
+        }
+        .tab-content button {
+            background-color: #93C5FD !important;
+            color: #000 !important;
+        }
+        .tab-content button:hover {
+            background-color: #60A5FA !important;
+        }
+        .tab-content div[class*="rounded-"][class*="bg-"],
+        .tab-content a[class*="rounded-"][class*="bg-"],
+        #auth-screen > div,
+        #pending-screen > div,
+        #sidebar div.rounded-xl.bg-white,
+        #detail-modal div[class*="rounded-"][class*="bg-"] {
+            --tw-bg-opacity: 0.2 !important;
+        }
+        .tab-content div[class*="rounded-"][class*="bg-"],
+        .tab-content div[class*="rounded-"][class*="bg-"] *,
+        .tab-content a[class*="rounded-"][class*="bg-"],
+        .tab-content a[class*="rounded-"][class*="bg-"] *,
+        #auth-screen > div,
+        #auth-screen > div *,
+        #pending-screen > div,
+        #pending-screen > div *,
+        #sidebar div.rounded-xl.bg-white,
+        #sidebar div.rounded-xl.bg-white *,
+        #detail-modal div[class*="rounded-"][class*="bg-"],
+        #detail-modal div[class*="rounded-"][class*="bg-"] * {
+            color: #000 !important;
+        }
+        #tab-dashboard > div:first-child > div.relative.z-10,
+        #tab-dashboard > div:first-child > div.relative.z-10 * {
+            color: #fff !important;
+        }
+        #module-preview-header,
+        #module-preview-header * {
+            color: #fff !important;
+        }
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col lg:flex-row">
+
+    <div id="auth-screen" class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl">
+            <div class="mb-6 flex items-center gap-3">
+                <img src="/images/modulab-logo.png" alt="Logo MODULAB" class="h-12 w-12 rounded-2xl object-cover">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900">MODULAB</h2>
+                    <p class="text-sm text-slate-500">Masuk untuk mengakses data praktikum</p>
+                </div>
+            </div>
+            <div id="auth-config-warning" class="hidden mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-900"></div>
+            <form id="auth-form" class="space-y-4">
+                <label class="block text-sm font-semibold text-slate-700">
+                    Email
+                    <input id="auth-email" type="email" autocomplete="email" required class="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100">
+                </label>
+                <label class="block text-sm font-semibold text-slate-700">
+                    Kata sandi
+                    <input id="auth-password" type="password" autocomplete="current-password" minlength="6" required class="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 font-normal outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100">
+                </label>
+                <p id="auth-message" role="status" class="hidden text-sm"></p>
+                <button id="auth-submit" type="submit" class="w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60">Masuk</button>
+            </form>
+            <button id="auth-toggle-mode" type="button" class="mt-4 w-full text-center text-sm font-semibold text-primary-700 hover:text-primary-800">Belum punya akun? Daftar</button>
+        </div>
+    </div>
+
+    <div id="pending-screen" style="display: none" class="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl text-center space-y-4">
+            <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
+                <i class="fa-solid fa-hourglass-half text-2xl"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-900">Menunggu persetujuan admin</h2>
+                <p class="mt-2 text-sm text-slate-500 leading-relaxed">
+                    Akun <span id="pending-email" class="font-semibold text-slate-700"></span> sudah terdaftar.
+                    Hubungi admin agar email Anda ditambahkan ke daftar anggota. Anda belum dapat membaca atau mengubah data.
+                </p>
+            </div>
+            <button type="button" onclick="signOut()" class="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50">
+                Keluar
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification with Undo Action -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-24 opacity-0 pointer-events-none">
+        <div class="bg-slate-900 text-white px-4 py-3.5 rounded-2xl shadow-xl flex items-center space-x-3 border border-slate-700 max-w-md">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-lg shrink-0"></i>
+            <span id="toast-message" class="text-xs sm:text-sm font-medium flex-1">Berhasil disimpan!</span>
+            <button id="toast-undo-btn" onclick="undoLastDelete()" class="hidden px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition shrink-0">
+                <i class="fa-solid fa-rotate-left mr-1"></i>Urungkan (Undo)
+            </button>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="hidden fixed inset-0 z-[80] overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="detail-modal-title" onclick="if (event.target === this) closeDetailModal()">
+        <div class="mx-auto my-6 w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+            <div class="mb-4 flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
+                <h2 id="detail-modal-title" class="text-lg font-bold text-slate-900"></h2>
+                <button id="detail-modal-close" type="button" onclick="closeDetailModal()" class="shrink-0 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200">
+                    Tutup
+                </button>
+            </div>
+            <div id="detail-modal-content" class="space-y-4 text-sm text-slate-700"></div>
+        </div>
+    </div>
+
+    <!-- Mobile Header -->
+    <div class="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+        <div class="flex items-center space-x-2.5">
+            <img src="/images/modulab-logo.png" alt="Logo MODULAB" class="h-9 w-9 rounded-xl object-cover shadow-sm">
+            <div>
+                <span class="font-bold text-lg text-slate-900 tracking-tight">MODULAB</span>
+                <span class="block text-[11px] text-slate-500 -mt-1">Portal Persiapan Laboran</span>
+            </div>
+        </div>
+        <button onclick="toggleMobileMenu()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none">
+            <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 transform -translate-x-full lg:translate-x-0 lg:static lg:h-screen lg:sticky lg:top-0 shrink-0">
+        <!-- Brand Logo -->
+        <div class="p-6 border-b border-slate-100">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <img src="/images/modulab-logo.png" alt="Logo MODULAB" class="h-10 w-10 rounded-xl object-cover shadow-md shadow-primary-500/20">
+                    <div>
+                        <h1 class="font-bold text-xl text-slate-900 tracking-tight">MODULAB</h1>
+                        <p class="text-xs text-slate-500 font-medium">Portal Persiapan Laboran</p>
+                    </div>
+                </div>
+                <button onclick="toggleMobileMenu()" class="lg:hidden text-slate-400 hover:text-slate-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div class="min-w-0">
+                    <p id="account-email" class="truncate text-xs font-semibold text-slate-700"></p>
+                    <p id="account-role" class="text-[11px] font-semibold text-primary-600"></p>
+                    <p id="sync-status" class="text-[11px] text-slate-400">Belum tersambung</p>
+                </div>
+                <button type="button" onclick="signOut()" class="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-50">Keluar</button>
+            </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <div class="p-4 flex-1 overflow-y-auto space-y-1.5">
+            <p class="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Menu Utama (Full CRUD)</p>
+            
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary-50 text-primary-700">
+                <i class="fa-solid fa-chart-pie w-5 text-center"></i>
+                <span>Beranda</span>
+            </button>
+
+            <button onclick="switchTab('modul')" id="nav-modul" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all">
+                <i class="fa-solid fa-list-check w-5 text-center"></i>
+                <span>Modul Praktikum</span>
+            </button>
+
+            <button onclick="switchTab('troubleshooting')" id="nav-troubleshooting" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all">
+                <i class="fa-solid fa-screwdriver-wrench w-5 text-center"></i>
+                <span>Problem Guide</span>
+            </button>
+
+            <button onclick="switchTab('checklist')" id="nav-checklist" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all">
+                <i class="fa-solid fa-clipboard-check w-5 text-center"></i>
+                <span>Checklist & Evaluasi</span>
+            </button>
+
+            <button onclick="switchTab('members')" id="nav-members" style="display: none" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all">
+                <i class="fa-solid fa-users-gear w-5 text-center"></i>
+                <span>Anggota & Akses</span>
+            </button>
+        </div>
+
+        <!-- Sidebar Footer: Status & Reset -->
+        <div class="p-4 border-t border-slate-100 bg-slate-50/60 space-y-2.5">
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-sm">
+                <div class="flex items-center space-x-2.5 mb-2">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-slate-700">Status Kesiapan Asisten</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div id="sidebar-progress-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 60%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-1.5 text-[11px] text-slate-500">
+                    <span>Progres Persiapan</span>
+                    <span id="sidebar-progress-text" class="font-bold text-slate-700">60%</span>
+                </div>
+            </div>
+            <button id="btn-reset-default" onclick="resetAllDefaultData()" style="display: none" class="w-full py-2 px-3 rounded-xl border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-600 hover:text-rose-600 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-rotate"></i> Pulihkan Data Contoh Awal
+            </button>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" onclick="toggleMobileMenu()" class="fixed inset-0 bg-slate-900/40 z-30 hidden lg:hidden backdrop-blur-xs"></div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+
+        <!-- ================= TAB 1: BERANDA / DASHBOARD ================= -->
+        <section id="tab-dashboard" class="tab-content active space-y-6">
+            <!-- Top Welcome & HMW Banner -->
+            <div class="relative overflow-hidden bg-indigo-700 bg-[url('/images/kelas-kuliah.jpg')] bg-cover bg-center rounded-2xl p-6 sm:p-8 text-white shadow-lg">
+                <div class="absolute inset-0 bg-black/40"></div>
+                <div class="relative z-10">
+                    <span class="inline-flex bg-white/20 px-3 py-1 rounded-full text-xs font-semibold text-white backdrop-blur-sm">Selamat datang di MODULAB</span>
+                    <h2 class="text-2xl sm:text-3xl font-bold mt-2">MODULAB</h2>
+                    <p class="text-sm sm:text-base text-white opacity-90">Praktikum Fisika Mekanika dan Panas</p>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div onclick="switchTab('checklist')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Kesiapan Hari Ini</span>
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-clipboard-check"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-800" id="stat-checklist">60%</div>
+                    <p class="text-xs text-slate-500 mt-1">Checklist pra-praktikum terpenuhi</p>
+                </div>
+
+                <div onclick="switchTab('modul')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Modul Tersusun</span>
+                        <div class="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-book-open"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-800" id="stat-modul">2 Modul</div>
+                    <p class="text-xs text-slate-500 mt-1">Mendukung lampiran video & file</p>
+                </div>
+
+                <div onclick="switchTab('troubleshooting')" class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all cursor-pointer group">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Bank Solusi Error</span>
+                        <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                    </div>
+                    <div class="text-2xl font-extrabold text-slate-800" id="stat-troubleshooting">5 Kasus</div>
+                    <p class="text-xs text-slate-500 mt-1">Panduan atasi kendala mahasiswa</p>
+                </div>
+
+            </div>
+
+            <!-- Quick Management Cards on Dashboard (With Direct Edit & Delete) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Daftar Modul Praktikum (Bisa Edit & Hapus Langsung) -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Daftar Modul Praktikum Siap Pakai</h3>
+                                <p class="text-xs text-slate-500">Klik Edit untuk membuka modul atau Hapus untuk menghapus langsung.</p>
+                            </div>
+                            <button onclick="createNewModule(); switchTab('modul');" class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold transition">
+                                + Modul Baru
+                            </button>
+                        </div>
+                        <div id="dashboard-module-list" class="space-y-2.5"></div>
+                    </div>
+                </div>
+
+                <!-- Daftar Kasus Troubleshooting Terbaru (Bisa Edit & Hapus Langsung) -->
+                <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base">Kasus Troubleshooting & Error Terbaru</h3>
+                                <p class="text-xs text-slate-500">Kelola cepat daftar kendala praktikum langsung dari beranda.</p>
+                            </div>
+                            <button onclick="switchTab('troubleshooting'); openTroubleFormForCreate();" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition">
+                                + Kasus Baru
+                            </button>
+                        </div>
+                        <div id="dashboard-trouble-list" class="space-y-2.5"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: PENYUSUN MODUL STANDAR (IDE 1 - FULL CRUD + MEDIA) ================= -->
+        <section id="tab-modul" class="tab-content space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 mt-0.5">Penyusun Instruksi Modul Standar</h2>
+                    <p class="text-xs text-slate-500 mt-1">Buat, edit, hapus modul, serta lampirkan video tutorial (MP4/YouTube), gambar, maupun dokumen pendukung praktikum.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button onclick="createNewModule()" class="px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-circle-plus"></i> Buat Modul Baru
+                    </button>
+                </div>
+            </div>
+
+            <!-- Daftar Modul Tersimpan (Setiap Pill Ada Tombol Edit/Pilih & Tombol Merah Hapus) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-700">Pilih Modul Tersimpan untuk Diedit / Dihapus:</span>
+                    <span id="builder-status-badge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <i class="fa-solid fa-bolt mr-1"></i>Tersimpan Otomatis
+                    </span>
+                </div>
+                <div id="saved-modules-bar" class="flex flex-wrap gap-2.5">
+                    <!-- Rendered by JS with clear Hapus button on each pill -->
+                </div>
+            </div>
+
+            <!-- Form Builder & Live Preview Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Left: Input Form (6 Cols) -->
+                <div class="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
+                        <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-primary-600"></i>
+                            <span>Formulir Penyusunan Instruksi</span>
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="saveCurrentModule()" class="px-3.5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-floppy-disk"></i> Simpan Modul
+                            </button>
+                            <button type="button" onclick="deleteActiveModule()" class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i> Hapus Modul Ini
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Judul Praktikum</label>
+                            <input type="text" id="mod-title" oninput="syncActiveModuleFromForm()" placeholder="Contoh: Praktikum 1 - Koneksi Database" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">Estimasi Waktu</label>
+                            <input type="text" id="mod-duration" oninput="syncActiveModuleFromForm()" placeholder="Misal: 90 Menit" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Tujuan Singkat (Mudah Dipahami Mahasiswa)</label>
+                        <textarea id="mod-goal" rows="2" oninput="syncActiveModuleFromForm()" placeholder="Jelaskan apa yang akan berhasil dibuat mahasiswa..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Alat / Perangkat Lunak yang Dibutuhkan (Pisahkan dengan koma)</label>
+                        <input type="text" id="mod-tools" oninput="syncActiveModuleFromForm()" placeholder="Contoh: XAMPP Control Panel, Web Browser, VS Code" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    </div>
+
+                    <!-- LAMPIRAN MEDIA PEMBELAJARAN TINGKAT MODUL -->
+                    <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-100 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                                <i class="fa-solid fa-photo-film text-primary-600"></i>
+                                <span>Lampiran Media Pembelajaran (Video MP4/WebM, Link YouTube, Gambar, PDF, Script)</span>
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="cursor-pointer bg-white hover:bg-indigo-50/50 border border-dashed border-indigo-300 rounded-xl p-2.5 flex items-center justify-center gap-2 text-xs font-bold text-primary-700 transition">
+                                <i class="fa-solid fa-cloud-arrow-up text-base"></i>
+                                <span>Unggah File (Video/Gambar/PDF/Kode)</span>
+                                <input type="file" id="mod-attachment-file" multiple accept="video/*,image/*,.pdf,.zip,.rar,.py,.php,.sql,.txt,.doc,.docx" onchange="handleModuleFilesUpload(event)" class="hidden">
+                            </label>
+
+                            <div class="flex gap-1.5">
+                                <input type="text" id="mod-attachment-url" placeholder="Tempel URL YouTube / Link File..." class="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <button type="button" onclick="addModuleLinkAttachment()" class="px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-xs font-bold shrink-0">
+                                    + Lampirkan
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Daftar File Terlampir dengan Tombol Merah Hapus Lampiran -->
+                        <div id="mod-attachments-container" class="space-y-2 pt-1"></div>
+                    </div>
+
+                    <!-- DAFTAR LANGKAH KERJA RUNTUT -->
+                    <div class="pt-1 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-xs font-bold text-slate-700">Daftar Langkah Kerja Runtut (Bisa Lampirkan Media Per Langkah)</label>
+                            <button type="button" onclick="addStepToActiveModule()" class="px-3 py-1.5 rounded-xl bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-bold flex items-center gap-1 transition">
+                                <i class="fa-solid fa-plus-circle"></i> + Tambah Langkah
+                            </button>
+                        </div>
+                        <div id="steps-container" class="space-y-3.5 max-h-[540px] overflow-y-auto pr-1">
+                            <!-- Step items generated via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Live Preview (6 Cols) -->
+                <div class="lg:col-span-6 bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden sticky top-6">
+                    <div id="module-preview-header" class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                            <span class="text-xs font-bold tracking-wide uppercase">Live Preview (Tampilan Mahasiswa)</span>
+                        </div>
+                        <button onclick="copyModuleText()" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5">
+                            <i class="fa-regular fa-copy"></i>
+                            <span>Salin Instruksi</span>
+                        </button>
+                    </div>
+
+                    <div id="module-preview-area" class="p-6 space-y-5 max-h-[750px] overflow-y-auto">
+                        <!-- Rendered Live by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: BANK KASUS & TROUBLESHOOTING (IDE 2 - FULL CRUD + MEDIA) ================= -->
+        <section id="tab-troubleshooting" class="tab-content space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-900 mt-0.5">Bank Kasus & Troubleshooting Praktikum</h2>
+                    <p class="text-xs text-slate-500 mt-1">Tambah, edit, hapus kasus kendala mahasiswa, serta lampirkan video tutorial penyelesaian atau gambar tangkapan layar.</p>
+                </div>
+                <button onclick="openTroubleFormForCreate()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shrink-0 shadow-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i> Tambah Kasus Error Baru
+                </button>
+            </div>
+
+            <!-- Form Add / Edit Troubleshooting -->
+            <div id="form-add-trouble" class="hidden bg-white p-6 rounded-2xl border-2 border-amber-300 shadow-sm space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+                    <h3 id="trouble-form-title" class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-screwdriver-wrench text-amber-500"></i>
+                        <span>Tambah Panduan Troubleshooting Baru</span>
+                    </h3>
+                    <button onclick="closeTroubleForm()" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold">Tutup âœ•</button>
+                </div>
+                <input type="hidden" id="tr-edit-id" value="">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Gejala / Keluhan Mahasiswa</label>
+                        <input type="text" id="tr-symptom" placeholder="Contoh: Pesan 'Port 3306 in use' saat menyalakan MySQL di XAMPP" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Kategori Praktikum</label>
+                        <select id="tr-category" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm bg-white">
+                            <option value="Basis Data">Basis Data</option>
+                            <option value="Pemrograman Dasar">Pemrograman Dasar</option>
+                            <option value="Jaringan & Server">Jaringan & Server</option>
+                            <option value="Perangkat Lab">Perangkat Lab</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Penyebab Utama</label>
+                        <textarea id="tr-cause" rows="2" placeholder="Jelaskan penyebab teknis secara singkat..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">Cara Asisten Menjelaskan & Solusi Cepat</label>
+                        <textarea id="tr-solution" rows="2" placeholder="Langkah perbaikan yang mudah diikuti mahasiswa..." class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm"></textarea>
+                    </div>
+                </div>
+                <!-- Lampiran Media Solusi -->
+                <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 space-y-2">
+                    <label class="block text-xs font-bold text-amber-950">Lampiran Video / Gambar / Dokumen Solusi (Opsional)</label>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <input type="file" id="tr-media-file" accept="video/*,image/*,.pdf" onchange="handleTroubleMediaSelect(event)" class="text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500 file:text-white hover:file:bg-amber-600 bg-white p-1.5 rounded-xl border border-slate-200">
+                        <input type="text" id="tr-media-url" placeholder="Atau tempel link YouTube / URL gambar solusi..." class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white">
+                    </div>
+                    <div id="tr-media-badge" class="hidden flex items-center justify-between bg-white px-3 py-1.5 rounded-lg border border-amber-200 text-xs">
+                        <span id="tr-media-name" class="font-semibold text-emerald-700 truncate"></span>
+                        <button type="button" onclick="clearTroubleTempMedia()" class="px-2 py-0.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded font-bold text-[11px]">Hapus Lampiran</button>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeTroubleForm()" class="px-4 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600">Batal</button>
+                    <button type="button" onclick="saveTroubleshootingItem()" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl">Simpan Kasus</button>
+                </div>
+            </div>
+
+            <!-- Search & Category Filter -->
+            <div class="flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-trouble" oninput="renderTroubleshooting()" placeholder="Cari keluhan mahasiswa, pesan error, atau solusi..." class="w-full pl-10 pr-4 py-2.5 bg-white rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                </div>
+                <select id="filter-trouble-cat" onchange="renderTroubleshooting()" class="px-4 py-2.5 bg-white rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 focus:outline-none">
+                    <option value="Semua">Semua Kategori</option>
+                    <option value="Basis Data">Basis Data</option>
+                    <option value="Pemrograman Dasar">Pemrograman Dasar</option>
+                    <option value="Jaringan & Server">Jaringan & Server</option>
+                    <option value="Perangkat Lab">Perangkat Lab</option>
+                </select>
+            </div>
+
+            <!-- Troubleshooting Cards List -->
+            <div id="troubleshooting-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Diisi via JavaScript -->
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: CHECKLIST KESIAPAN & EVALUASI (IDE 4 & IDE 8 - FULL CRUD + MEDIA) ================= -->
+        <section id="tab-checklist" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Fitur Kontrol Kualitas Praktikum (Full CRUD & Lampiran Bukti)</span>
+                <h2 class="text-xl font-bold text-slate-900 mt-0.5">Checklist Kesiapan Mengajar & Logbook Evaluasi</h2>
+                <p class="text-xs text-slate-500 mt-1">Kelola daftar periksa kesiapan sebelum kelas serta catat evaluasi pasca-praktikum lengkap dengan lampiran foto/video bukti kendala.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <!-- Bagian A: Checklist Kesiapan Mengajar (Ide 4 - Full CRUD) -->
+                <div class="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-4">
+                    <div>
+                        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                            <h3 class="font-bold text-slate-800 text-base">
+                                <i class="fa-solid fa-list-check text-emerald-600 mr-1.5"></i>A. Checklist Sebelum Kelas Dimulai
+                            </h3>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="resetChecklist()" class="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100 text-xs font-semibold text-slate-600">Reset Centang</button>
+                                <button onclick="deleteCompletedChecklist()" class="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-xs font-bold text-rose-600">
+                                    <i class="fa-solid fa-trash-can mr-1"></i>Hapus Semua yang Selesai
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 mb-4">Centang, edit, atau hapus poin persiapan sebelum mahasiswa masuk ke laboratorium.</p>
+
+                        <!-- Progress Bar -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-4">
+                            <div class="flex justify-between items-center mb-1.5">
+                                <span class="text-xs font-bold text-slate-700">Tingkat Kesiapan Anda</span>
+                                <span id="checklist-percent-label" class="text-xs font-bold text-emerald-600">60% Selesai</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2.5 rounded-full overflow-hidden">
+                                <div id="checklist-main-bar" class="bg-emerald-500 h-full transition-all duration-300" style="width: 60%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Tambah / Edit Checklist -->
+                        <div class="mb-4 flex gap-2">
+                            <input type="hidden" id="check-edit-id" value="">
+                            <input type="text" id="new-check-input" placeholder="Tulis poin checklist persiapan baru..." class="flex-1 px-3.5 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            <button onclick="saveChecklistItem()" id="btn-save-check" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shrink-0">
+                                + Tambah
+                            </button>
+                            <button onclick="cancelCheckEdit()" id="btn-cancel-check" class="hidden px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold rounded-xl shrink-0">
+                                Batal
+                            </button>
+                        </div>
+
+                        <!-- Checklist Items -->
+                        <div id="checklist-container" class="space-y-2.5">
+                            <!-- Diisi via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bagian B: Logbook Evaluasi Pasca-Praktikum (Ide 8 - Full CRUD + Media) -->
+                <div class="lg:col-span-6 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-5">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">
+                            <i class="fa-solid fa-clipboard-question text-primary-600 mr-1.5"></i>B. Catatan Evaluasi Pasca-Praktikum (Logbook)
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Catat kendala instruksi seusai kelas beserta lampiran foto/video bukti error untuk perbaikan modul berikutnya.</p>
+                    </div>
+
+                    <div class="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <input type="hidden" id="eval-edit-id" value="">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">1. Sesi / Nama Modul Praktikum</label>
+                            <input type="text" id="eval-session" placeholder="Contoh: Kelas TI-2A - Modul 1 Koneksi Database" class="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">2. Langkah instruksi mana yang paling banyak ditanyakan mahasiswa?</label>
+                            <input type="text" id="eval-confused" placeholder="Contoh: Langkah ke-3 saat mengatur konfigurasi file koneksi.php" class="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">3. Rencana perbaikan instruksi untuk kelas berikutnya</label>
+                            <textarea id="eval-action" rows="2" placeholder="Contoh: Menambahkan video singkat letak folder htdocs dan memperjelas catatan..." class="w-full px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs"></textarea>
+                        </div>
+                        <!-- Lampiran Bukti Evaluasi -->
+                        <div class="p-3 rounded-xl bg-white border border-slate-200 space-y-2">
+                            <label class="block text-xs font-bold text-slate-700">4. Lampirkan Foto / Video Bukti Kendala Kelas (Opsional)</label>
+                            <input type="file" id="eval-media-file" accept="video/*,image/*,.pdf" onchange="handleEvalMediaSelect(event)" class="w-full text-xs text-slate-600 file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-primary-50 file:text-primary-700">
+                            <div id="eval-media-badge" class="hidden flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+                                <span id="eval-media-name" class="font-semibold text-primary-700 truncate"></span>
+                                <button type="button" onclick="clearEvalTempMedia()" class="px-2 py-0.5 bg-rose-100 text-rose-700 rounded font-bold text-[11px]">Hapus Lampiran</button>
+                            </div>
+                        </div>
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button type="button" id="btn-cancel-eval" onclick="cancelEvalEdit()" class="hidden px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl">
+                                Batal Edit
+                            </button>
+                            <button type="button" id="btn-save-eval" onclick="saveEvaluationLog()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-bold rounded-xl shadow-xs">
+                                <i class="fa-solid fa-paper-plane mr-1.5"></i>Simpan Catatan Evaluasi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Riwayat Logbook -->
+                    <div>
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Riwayat Evaluasi Sebelumnya</h4>
+                        <div id="eval-history-list" class="space-y-3 max-h-96 overflow-y-auto pr-1">
+                            <!-- Diisi via JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 6: ANGGOTA & AKSES (ADMIN) ================= -->
+        <section id="tab-members" class="tab-content space-y-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+                <span class="text-xs font-bold uppercase tracking-wider text-primary-600">Khusus Admin • Kontrol Akses Workspace</span>
+                <h2 class="text-xl font-bold text-slate-900 mt-0.5">Anggota & Daftar Email Diizinkan</h2>
+                <p class="text-xs text-slate-500 mt-1">Hanya email di daftar ini yang menjadi member. Email lain yang mendaftar berstatus pending tanpa akses data. Checklist dan seluruh konten bersifat bersama untuk tim.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">
+                        <i class="fa-solid fa-envelope-circle-check text-emerald-600 mr-1.5"></i>Email yang Diizinkan
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="email" id="allowed-email-input" placeholder="nama@kampus.ac.id" class="sm:col-span-2 px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <select id="allowed-email-role" class="px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white font-semibold">
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="button" onclick="saveAllowedEmail()" class="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl">
+                        <i class="fa-solid fa-user-plus mr-1"></i>Tambah / Perbarui Email
+                    </button>
+                    <div id="allowed-emails-list" class="space-y-2 max-h-80 overflow-y-auto pr-1"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                    <h3 class="font-bold text-slate-800 text-base">
+                        <i class="fa-solid fa-users text-primary-600 mr-1.5"></i>Akun Terdaftar
+                    </h3>
+                    <p class="text-xs text-slate-500">Ubah role akun yang sudah mendaftar. Menurunkan role ke pending mencabut akses data.</p>
+                    <div id="members-list" class="space-y-2 max-h-96 overflow-y-auto pr-1"></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <h3 class="font-bold text-slate-800 text-base">
+                            <i class="fa-solid fa-clock-rotate-left text-amber-600 mr-1.5"></i>Impor Data Lama
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-1">Membaca <code class="px-1 rounded bg-slate-100">labassist_shared_state</code> dan/atau localStorage, memindahkan media base64 ke Storage. Aman dijalankan berulang.</p>
+                    </div>
+                    <button type="button" onclick="importLegacyData()" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shrink-0">
+                        <i class="fa-solid fa-file-import mr-1"></i>Impor Data Lama
+                    </button>
+                </div>
+                <div id="import-summary"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
