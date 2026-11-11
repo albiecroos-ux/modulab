@@ -194,7 +194,7 @@ export function updateLivePreview() {
     </div>
 
     <div>
-      <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Alat & Perangkat Lunak</h4>
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Alat & Bahan</h4>
       <div class="flex flex-wrap gap-1.5">
         ${toolsArray
           .map(
@@ -260,7 +260,7 @@ export function copyModuleText() {
   let text = `MODUL PRAKTIKUM: ${(mod.title || '').toUpperCase()}\n`;
   text += `Estimasi Waktu: ${mod.duration}\n\n`;
   text += `TUJUAN:\n${mod.goal}\n\n`;
-  text += `ALAT & SOFTWARE:\n${mod.tools}\n\n`;
+  text += `ALAT & BAHAN:\n${mod.tools}\n\n`;
   text += `LANGKAH KERJA:\n`;
   (mod.steps || []).forEach((s, i) => {
     text += `${i + 1}. ${s.instruction}\n`;
