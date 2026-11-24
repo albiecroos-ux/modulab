@@ -28,17 +28,65 @@ export async function signIn(email, password) {
 export async function signUp(email, password, fullName = '') {
   if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
   try {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullName.trim();
+
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: cleanEmail,
       password,
       options: {
         data: {
-          full_name: fullName.trim()
+          full_name: cleanName
         }
       }
     });
     if (error) throw error;
-    return { data, error: null };
+
+    let session = data?.session || null;
+
+    // Jika Supabase belum mengembalikan sesi (misal auto-confirm aktif tapi session belum di-attach), coba signIn
+    if (!session && data?.user) {
+      try {
+        const signInRes = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password
+        });
+        if (signInRes.data?.session) {
+          session = signInRes.data.session;
+        }
+      } catch (signInErr) {
+        // Abaikan jika email belum dikonfirmasi
+      }
+    }
+
+    // Fallback upsert profiles dari sisi klien untuk menjamin data pasti masuk ke tabel profiles
+    if (data?.user?.id) {
+      const initialRole = cleanEmail === 'adminmodullab@ui.ac.id' ? 'admin' : 'pending';
+      try {
+        const { error: upsertErr } = await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            email: cleanEmail,
+            role: initialRole,
+            full_name: cleanName
+          }, { onConflict: 'id' });
+
+        if (upsertErr && upsertErr.code === '42703') {
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: data.user.id,
+              email: cleanEmail,
+              role: initialRole
+            }, { onConflict: 'id' });
+        }
+      } catch (err) {
+        console.warn('Fallback upsert profile client-side:', err);
+      }
+    }
+
+    return { data: { ...data, session }, error: null };
   } catch (error) {
     return { data: null, error };
   }

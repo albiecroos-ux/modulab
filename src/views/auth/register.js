@@ -208,7 +208,34 @@ export function renderRegister(container) {
         return;
       }
 
-      navigate('#/menunggu');
+      // Jika pendaftaran berhasil dan langsung mendapat sesi
+      if (data?.session) {
+        navigate('#/menunggu');
+        return;
+      }
+
+      // Jika pendaftaran berhasil tapi email memerlukan konfirmasi di Supabase Auth
+      container.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4 py-8">
+          <div class="w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl border border-slate-100 text-center space-y-4">
+            <div class="mx-auto h-16 w-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-3xl">
+              <i class="fa-solid fa-envelope-circle-check"></i>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800">Pendaftaran Berhasil!</h1>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Akun Anda telah dibuat di sistem. Jika akun Anda belum langsung aktif, periksa email masuk untuk tautan konfirmasi, atau tunggu persetujuan dari Administrator.
+            </p>
+            <div class="pt-4 flex flex-col sm:flex-row gap-2 justify-center">
+              <a href="#/login" class="px-5 py-2.5 rounded-xl bg-primary-600 text-white font-bold text-xs hover:bg-primary-700 transition">
+                Ke Halaman Masuk
+              </a>
+              <a href="#/" class="px-5 py-2.5 rounded-xl bg-slate-100 text-slate-700 font-bold text-xs hover:bg-slate-200 transition">
+                Halaman Utama
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
     } catch (err) {
       errorBox.textContent = 'Tidak dapat terhubung ke server. Coba lagi.';
       errorBox.classList.remove('hidden');

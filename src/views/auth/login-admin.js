@@ -89,7 +89,11 @@ export function renderLoginAdmin(container) {
     try {
       const { data, error } = await authService.signIn(email, password);
       if (error) {
-        errorBox.textContent = 'Email atau password salah.';
+        if (error.message?.toLowerCase().includes('email not confirmed')) {
+          errorBox.textContent = 'Email admin belum dikonfirmasi. Periksa kotak masuk email atau matikan "Confirm Email" di dashboard Supabase Auth.';
+        } else {
+          errorBox.textContent = 'Email atau password salah.';
+        }
         errorBox.classList.remove('hidden');
         return;
       }
