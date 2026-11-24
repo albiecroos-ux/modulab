@@ -148,7 +148,7 @@ export async function renderMembersView(container) {
 
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
-      filtered = filtered.filter((m) => 
+      filtered = filtered.filter((m) =>
         (m.email || '').toLowerCase().includes(q) ||
         (m.full_name || '').toLowerCase().includes(q)
       );
@@ -178,25 +178,25 @@ export async function renderMembersView(container) {
           </thead>
           <tbody class="divide-y divide-slate-100">
             ${filtered.map((item) => {
-              const isAdmin = item.role === 'admin';
-              const isUser = item.role === 'user';
-              const isPending = item.role === 'pending';
-              const isRejected = item.role === 'rejected';
+      const isAdmin = item.role === 'admin';
+      const isUser = item.role === 'user';
+      const isPending = item.role === 'pending';
+      const isRejected = item.role === 'rejected';
 
-              let statusBadge = '';
-              if (isAdmin) {
-                statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">Admin</span>';
-              } else if (isUser) {
-                statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">User (Disetujui)</span>';
-              } else if (isPending) {
-                statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200">Menunggu ACC</span>';
-              } else {
-                statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800">Ditolak</span>';
-              }
+      let statusBadge = '';
+      if (isAdmin) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-800">Admin</span>';
+      } else if (isUser) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800">User (Disetujui)</span>';
+      } else if (isPending) {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-amber-50 text-amber-700 border border-amber-200">Menunggu ACC</span>';
+      } else {
+        statusBadge = '<span class="px-2 py-0.5 rounded-full font-bold bg-rose-100 text-rose-800">Ditolak</span>';
+      }
 
-              const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+      const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
-              return `
+      return `
                 <tr class="hover:bg-slate-50/80 transition">
                   <td class="py-3 px-4 font-semibold text-slate-800">
                     ${escapeHtml(item.full_name || '(Tanpa Nama)')}
@@ -248,7 +248,7 @@ export async function renderMembersView(container) {
                   </td>
                 </tr>
               `;
-            }).join('')}
+    }).join('')}
           </tbody>
         </table>
       </div>
@@ -389,3 +389,4 @@ export function cleanupMembersRealtime() {
     realtimeChannel = null;
   }
 }
+

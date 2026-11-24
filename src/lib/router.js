@@ -17,11 +17,10 @@ export function getQueryParams() {
   return new URLSearchParams(parts[1]);
 }
 
-export function navigate(path) {
+export function navigate(path, force = false) {
   if (window.location.hash !== path) {
     window.location.hash = path;
-  } else {
-    // Jika hash sama persis, pemicu manual untuk listener
+  } else if (force) {
     notifyListeners();
   }
 }

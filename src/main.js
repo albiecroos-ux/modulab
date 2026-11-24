@@ -357,141 +357,180 @@ function handleSwitchTab(tabId) {
   switchTab(tabId);
 }
 
+let isRenderingRoute = false;
+let isBooting = false;
+let isBooted = false;
+
 function renderRoute(path) {
-  const normalizedPath = path || getHashPath();
-  const authRoot = document.getElementById('auth-root');
-  const profileRoot = document.getElementById('profile-root');
-  const appShell = document.getElementById('app-shell');
+  if (isRenderingRoute) return;
+  isRenderingRoute = true;
+  try {
+    const normalizedPath = path || getHashPath();
+    const authRoot = document.getElementById('auth-root');
+    const profileRoot = document.getElementById('profile-root');
+    const appShell = document.getElementById('app-shell');
 
-  const access = checkRouteAccess(normalizedPath);
+    const access = checkRouteAccess(normalizedPath);
 
-  if (access.loading) {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      authRoot.innerHTML = `
-        <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white">
-          <div class="text-center space-y-3">
-            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary-500"></i>
-            <p class="text-xs text-slate-400">Memuat MODULAB…</p>
-          </div>
-        </div>
-      `;
+    if (access.loading) {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        const errorMessage = sessionState.error?.message;
+        authRoot.innerHTML = errorMessage || (sessionState.session && !sessionState.role)
+          ? `
+            <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white">
+              <div class="max-w-md rounded-2xl bg-slate-800 p-6 text-center space-y-3">
+                <i class="fa-solid fa-triangle-exclamation text-3xl text-amber-400"></i>
+                <p class="font-semibold">Sesi atau profil akun gagal dimuat.</p>
+                <p class="text-xs text-slate-300">Periksa koneksi dan skema database Supabase, lalu coba lagi.</p>
+                ${errorMessage ? `<p class="text-xs text-rose-300 break-words">${escapeHtml(errorMessage)}</p>` : ''}
+                <div class="pt-2 flex justify-center gap-2">
+                  <button id="btn-session-retry" type="button" class="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold hover:bg-primary-500">Coba lagi</button>
+                  <button id="btn-session-signout" type="button" class="rounded-lg bg-slate-700 px-4 py-2 text-sm font-semibold hover:bg-slate-600">Keluar</button>
+                </div>
+              </div>
+            </div>
+          `
+          : `
+            <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white">
+              <div class="text-center space-y-3">
+                <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary-500"></i>
+                <p class="text-xs text-slate-400">Memuat MODULAB…</p>
+              </div>
+            </div>
+          `;
+        authRoot.querySelector('#btn-session-retry')?.addEventListener('click', () => window.location.reload());
+        authRoot.querySelector('#btn-session-signout')?.addEventListener('click', () => signOut());
+      }
+      if (profileRoot) profileRoot.classList.add('hidden');
+      if (appShell) appShell.classList.add('hidden');
+      return;
     }
+
+    if (access.redirect && access.redirect !== normalizedPath) {
+      navigate(access.redirect);
+      return;
+    }
+
+    if (authRoot) authRoot.classList.add('hidden');
     if (profileRoot) profileRoot.classList.add('hidden');
     if (appShell) appShell.classList.add('hidden');
-    return;
-  }
 
-  if (access.redirect) {
-    navigate(access.redirect);
-    return;
-  }
+    if (normalizedPath === '#/' || normalizedPath === '') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderLanding(authRoot);
+      }
+    } else if (normalizedPath === '#/login') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderLoginUser(authRoot);
+      }
+    } else if (normalizedPath === '#/admin/login') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderLoginAdmin(authRoot);
+      }
+    } else if (normalizedPath === '#/daftar') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderRegister(authRoot);
+      }
+    } else if (normalizedPath === '#/lupa-password') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderForgot(authRoot);
+      }
+    } else if (normalizedPath === '#/reset-password') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderReset(authRoot);
+      }
+    } else if (normalizedPath === '#/menunggu') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderPending(authRoot);
+      }
+    } else if (normalizedPath === '#/ditolak') {
+      if (authRoot) {
+        authRoot.classList.remove('hidden');
+        renderRejected(authRoot);
+      }
+    } else if (normalizedPath === '#/profil') {
+      if (profileRoot) {
+        profileRoot.classList.remove('hidden');
+        renderProfile(profileRoot);
+      }
+    } else {
+      // #/app
+      if (appShell) appShell.classList.remove('hidden');
+      applyRoleVisibility();
+      const accountEmail = document.getElementById('account-email');
+      const accountRole = document.getElementById('account-role');
+      if (accountEmail) accountEmail.textContent = sessionState.user?.email || '';
+      if (accountRole) accountRole.textContent = roleLabel(sessionState.role);
 
-  if (authRoot) authRoot.classList.add('hidden');
-  if (profileRoot) profileRoot.classList.add('hidden');
-  if (appShell) appShell.classList.add('hidden');
-
-  if (normalizedPath === '#/' || normalizedPath === '') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderLanding(authRoot);
+      if (sessionState.user && !isBooted && !isBooting) {
+        boot(sessionState.user);
+      }
     }
-  } else if (normalizedPath === '#/login') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderLoginUser(authRoot);
-    }
-  } else if (normalizedPath === '#/admin/login') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderLoginAdmin(authRoot);
-    }
-  } else if (normalizedPath === '#/daftar') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderRegister(authRoot);
-    }
-  } else if (normalizedPath === '#/lupa-password') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderForgot(authRoot);
-    }
-  } else if (normalizedPath === '#/reset-password') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderReset(authRoot);
-    }
-  } else if (normalizedPath === '#/menunggu') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderPending(authRoot);
-    }
-  } else if (normalizedPath === '#/ditolak') {
-    if (authRoot) {
-      authRoot.classList.remove('hidden');
-      renderRejected(authRoot);
-    }
-  } else if (normalizedPath === '#/profil') {
-    if (profileRoot) {
-      profileRoot.classList.remove('hidden');
-      renderProfile(profileRoot);
-    }
-  } else {
-    // #/app
-    if (appShell) appShell.classList.remove('hidden');
-    applyRoleVisibility();
-    const accountEmail = document.getElementById('account-email');
-    const accountRole = document.getElementById('account-role');
-    if (accountEmail) accountEmail.textContent = sessionState.user?.email || '';
-    if (accountRole) accountRole.textContent = roleLabel(sessionState.role);
-
-    if (sessionState.user && (!state.user || state.user.id !== sessionState.user.id)) {
-      boot(sessionState.user);
-    }
+  } finally {
+    isRenderingRoute = false;
   }
 }
 
 async function boot(user) {
-  state.user = user;
-  setSyncStatus('Memuat profil…');
-  const profile = throwIfError(await authService.getProfile(user.id), 'memuat profil');
-
-  if (!profile) {
-    await authService.signOut();
-    state.user = null;
-    navigate('#/');
-    return;
-  }
-
-  state.profile = profile;
-  const accountEmail = document.getElementById('account-email');
-  const accountRole = document.getElementById('account-role');
-  if (accountEmail) accountEmail.textContent = user.email || '';
-  if (accountRole) accountRole.textContent = roleLabel(profile.role);
-
-  if (profile.role === 'pending') {
-    navigate('#/menunggu');
-    return;
-  }
-  if (profile.role === 'rejected') {
-    navigate('#/ditolak');
-    return;
-  }
-
-  applyRoleVisibility();
-  switchTab('dashboard');
-  setSyncStatus('Memuat data…');
-
+  if (isBooting || isBooted) return;
+  isBooting = true;
   try {
-    await refreshAll();
-    setupRealtime();
-    setSyncStatus('Tersambung ke cloud');
-  } catch (error) {
-    reportError('Gagal memuat data', error);
+    state.user = user;
+    setSyncStatus('Memuat profil…');
+    const profileRes = await authService.getProfile(user.id);
+    const profile = profileRes?.data;
+
+    if (!profile) {
+      await authService.signOut();
+      state.user = null;
+      isBooted = false;
+      navigate('#/');
+      return;
+    }
+
+    state.profile = profile;
+    const accountEmail = document.getElementById('account-email');
+    const accountRole = document.getElementById('account-role');
+    if (accountEmail) accountEmail.textContent = user.email || '';
+    if (accountRole) accountRole.textContent = roleLabel(profile.role);
+
+    if (profile.role === 'pending') {
+      navigate('#/menunggu');
+      return;
+    }
+    if (profile.role === 'rejected') {
+      navigate('#/ditolak');
+      return;
+    }
+
+    applyRoleVisibility();
+    switchTab('dashboard');
+    setSyncStatus('Memuat data…');
+
+    try {
+      await refreshAll();
+      setupRealtime();
+      isBooted = true;
+      setSyncStatus('Tersambung ke cloud');
+    } catch (err) {
+      reportError('Gagal memuat data awal', err);
+    }
+  } finally {
+    isBooting = false;
   }
 }
 
 function handleSignedOut() {
+  isBooted = false;
+  isBooting = false;
   state.user = null;
   state.profile = null;
   resetContentState();
@@ -1792,7 +1831,18 @@ async function init() {
     state.profile = currSession.profile;
     applyRoleVisibility();
 
+    if (currSession.loading) return;
+
     const currentPath = getHashPath();
+    if (!currSession.user) {
+      if (currentPath.startsWith('#/app') || currentPath === '#/menunggu' || currentPath === '#/ditolak' || currentPath === '#/profil') {
+        navigate('#/');
+      } else {
+        renderRoute(currentPath);
+      }
+      return;
+    }
+
     if (currSession.role === 'user' && currentPath === '#/menunggu') {
       showToast('Akun Anda telah disetujui! Mengalihkan ke aplikasi…');
       navigate('#/app');

@@ -49,3 +49,4 @@ export function renderRejected(container) {
     navigate('#/');
   });
 }
+

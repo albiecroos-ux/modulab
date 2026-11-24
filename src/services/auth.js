@@ -58,12 +58,37 @@ export async function signOut() {
 export async function getProfile(userId) {
   if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('profiles')
       .select('id, email, role, full_name, reviewed_by, reviewed_at, rejection_reason, created_at, updated_at')
       .eq('id', userId)
       .maybeSingle();
+
+    // Fallback jika kolom baru belum ada di database Supabase (error 42703)
+    if (error && error.code === '42703') {
+      const fallback = await supabase
+        .from('profiles')
+        .select('id, email, role, created_at, updated_at')
+        .eq('id', userId)
+        .maybeSingle();
+      data = fallback.data;
+      error = fallback.error;
+      if (data) {
+        data.full_name = data.full_name || '';
+      }
+    }
+
     if (error) throw error;
+
+    // Normalisasi role lama (member -> user) dan deteksi admin utama
+    if (data) {
+      if (data.email === 'adminmodullab@ui.ac.id') {
+        data.role = 'admin';
+      } else if (data.role === 'member') {
+        data.role = 'user';
+      }
+    }
+
     return { data, error: null };
   } catch (error) {
     return { data: null, error };

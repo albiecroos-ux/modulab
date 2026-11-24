@@ -14,7 +14,10 @@ Kolom `legacy_id` hanya dipakai oleh fitur "Impor data lama" agar idempoten
 | --- | --- | --- |
 | `id` | uuid PK | FK `auth.users(id)` on delete cascade |
 | `email` | text | lowercase |
-| `role` | text | `admin` / `member` / `pending` |
+| `full_name` | text | nama lengkap dari metadata pendaftaran |
+| `role` | text | `admin` / `user` / `pending` / `rejected` |
+| `reviewed_by`, `reviewed_at` | uuid, timestamptz | admin dan waktu peninjauan akun |
+| `rejection_reason` | text | alasan penolakan, opsional |
 | `created_at`, `updated_at` | timestamptz | |
 
 ### `allowed_emails`

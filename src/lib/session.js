@@ -47,9 +47,14 @@ export async function refreshProfile() {
   if (error) {
     console.warn('Gagal mengambil profil:', error);
     sessionState.error = error;
+    // Fallback role untuk admin utama bila ada kendala query
+    if (sessionState.user.email === 'adminmodullab@ui.ac.id') {
+      sessionState.role = 'admin';
+    }
   } else {
     sessionState.profile = profile || null;
-    sessionState.role = profile?.role || null;
+    sessionState.role = profile?.role || (sessionState.user.email === 'adminmodullab@ui.ac.id' ? 'admin' : null);
+    sessionState.error = null;
   }
   notifySessionListeners();
   return sessionState.profile;
@@ -74,8 +79,15 @@ function setupProfileRealtime(userId) {
       },
       (payload) => {
         if (payload?.new) {
-          sessionState.profile = payload.new;
-          sessionState.role = payload.new.role || null;
+          const newProfile = { ...payload.new };
+          if (newProfile.email === 'adminmodullab@ui.ac.id') {
+            newProfile.role = 'admin';
+          } else if (newProfile.role === 'member') {
+            newProfile.role = 'user';
+          }
+          sessionState.profile = newProfile;
+          sessionState.role = newProfile.role || null;
+          sessionState.error = null;
           notifySessionListeners();
         }
       }
@@ -85,10 +97,14 @@ function setupProfileRealtime(userId) {
 
 export async function initSession() {
   sessionState.loading = true;
+  sessionState.error = null;
+  sessionState.profile = null;
+  sessionState.role = null;
   notifySessionListeners();
 
   try {
-    const { data: session } = await authService.getSession();
+    const { data: session, error } = await authService.getSession();
+    if (error) throw error;
     sessionState.session = session;
     sessionState.user = session?.user || null;
 
@@ -119,6 +135,7 @@ export async function initSession() {
       }
       sessionState.profile = null;
       sessionState.role = null;
+      sessionState.error = null;
       sessionState.loading = false;
       notifySessionListeners();
     } else if (newSession?.user?.id) {
@@ -139,8 +156,8 @@ export async function clearSession() {
   sessionState.user = null;
   sessionState.profile = null;
   sessionState.role = null;
+  sessionState.error = null;
   sessionState.loading = false;
   notifySessionListeners();
   await authService.signOut();
 }
-

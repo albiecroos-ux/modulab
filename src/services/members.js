@@ -15,9 +15,31 @@ export async function listProfiles(roleFilter = null) {
       query = query.eq('role', roleFilter);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    // Fallback untuk skema lama sebelum kolom baru ditambahkan
+    if (error && error.code === '42703') {
+      let fallbackQuery = supabase
+        .from('profiles')
+        .select('id, email, role, created_at')
+        .order('created_at', { ascending: false });
+      if (roleFilter) {
+        fallbackQuery = fallbackQuery.eq('role', roleFilter);
+      }
+      const fallback = await fallbackQuery;
+      data = fallback.data;
+      error = fallback.error;
+    }
+
     if (error) throw error;
-    return { data: data || [], error: null };
+
+    const normalized = (data || []).map((p) => ({
+      ...p,
+      role: p.email === 'adminmodullab@ui.ac.id' ? 'admin' : (p.role === 'member' ? 'user' : p.role),
+      full_name: p.full_name || ''
+    }));
+
+    return { data: normalized, error: null };
   } catch (error) {
     return { data: null, error };
   }
