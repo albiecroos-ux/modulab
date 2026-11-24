@@ -103,10 +103,13 @@ export function renderProfile(container) {
     </div>
   `;
 
-  // Listener logout
-  container.querySelector('#btn-profile-logout').addEventListener('click', async () => {
-    await clearSession();
-    navigate('#/');
+  // Listener logout dengan modal konfirmasi
+  container.querySelector('#btn-profile-logout').addEventListener('click', () => {
+    if (typeof window.signOut === 'function') {
+      window.signOut();
+    } else {
+      clearSession().then(() => navigate('#/'));
+    }
   });
 
   // Logika validasi dan ganti kata sandi

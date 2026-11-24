@@ -547,13 +547,61 @@ function handleSignedOut() {
   navigate('#/');
 }
 
-async function signOut() {
+function showSignOutModal() {
+  const existingModal = document.getElementById('modal-signout-confirm');
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-signout-confirm';
+  modal.className = 'fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-200';
+  modal.innerHTML = `
+    <div class="relative w-full max-w-sm rounded-3xl bg-white p-6 sm:p-7 shadow-2xl border border-slate-100 text-center transform transition-all scale-100">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 shadow-inner">
+        <i class="fa-solid fa-arrow-right-from-bracket text-2xl"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800">Konfirmasi Keluar</h3>
+      <p class="mt-1.5 text-xs text-slate-500 leading-relaxed">
+        Apakah Anda yakin ingin keluar dari akun MODULAB? Anda harus masuk kembali untuk mengakses modul praktikum.
+      </p>
+      <div class="mt-6 flex items-center gap-3">
+        <button id="btn-cancel-signout" type="button"
+          class="w-full py-2.5 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition">
+          Batal
+        </button>
+        <button id="btn-confirm-signout" type="button"
+          class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-200 transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Ya, Keluar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const closeModal = () => modal.remove();
+
+  modal.querySelector('#btn-cancel-signout').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  modal.querySelector('#btn-confirm-signout').addEventListener('click', async () => {
+    closeModal();
+    await performSignOut();
+  });
+}
+
+async function performSignOut() {
   try {
     await clearSession();
   } catch (error) {
     showToast(`Gagal keluar: ${error.message || 'Periksa koneksi Supabase.'}`);
   }
   handleSignedOut();
+}
+
+async function signOut() {
+  showSignOutModal();
 }
 
 // ---------------------------------------------------------------------------
