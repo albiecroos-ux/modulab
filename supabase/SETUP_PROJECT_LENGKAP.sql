@@ -1,4 +1,4 @@
--- ============================================================================
+z-- ============================================================================
 -- MODULAB: SETUP LENGKAP DATABASE SUPABASE (PROJECT BARU)
 -- Salin dan jalankan seluruh isi file ini di Supabase SQL Editor.
 -- ============================================================================
@@ -209,6 +209,7 @@ create trigger trg_profiles_audit after update of role on public.profiles
   execute function public.log_role_change();
 
 -- Fungsi hapus user oleh admin
+drop function if exists public.admin_delete_user(uuid);
 create or replace function public.admin_delete_user(p_user_id uuid)
 returns boolean language plpgsql security definer set search_path = '' as $$
 begin
@@ -339,18 +340,24 @@ create policy lab_media_admin_delete on storage.objects for delete to authentica
 
 -- 7. REALTIME
 do $$
+declare
+  t text;
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
     create publication supabase_realtime;
   end if;
+
+  for t in select unnest(array[
+    'profiles', 'modules', 'module_steps', 'module_attachments',
+    'troubleshooting_items', 'glossary_terms', 'checklist_items', 'evaluation_logs'
+  ])
+  loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
 end;
 $$;
-
-alter publication supabase_realtime add table public.profiles;
-alter publication supabase_realtime add table public.modules;
-alter publication supabase_realtime add table public.module_steps;
-alter publication supabase_realtime add table public.module_attachments;
-alter publication supabase_realtime add table public.troubleshooting_items;
-alter publication supabase_realtime add table public.glossary_terms;
-alter publication supabase_realtime add table public.checklist_items;
-alter publication supabase_realtime add table public.evaluation_logs;
