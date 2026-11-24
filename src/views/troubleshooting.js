@@ -35,10 +35,10 @@ export function renderTroubleshooting() {
                 <button type="button" onclick="viewContent('troubleshooting', '${id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition flex items-center gap-1">
                   <i class="fa-solid fa-eye"></i> Lihat
                 </button>
-                <button type="button" onclick="editTroubleshootingItem('${id}')" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-bold transition flex items-center gap-1">
+                <button type="button" onclick="editTroubleshootingItem('${id}')" class="admin-only px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 text-xs font-bold transition flex items-center gap-1">
                   <i class="fa-solid fa-pen-to-square"></i> Edit
                 </button>
-                <button type="button" onclick="deleteTroubleshootingItem('${id}')" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1">
+                <button type="button" onclick="deleteTroubleshootingItem('${id}')" class="admin-only px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition flex items-center gap-1">
                   <i class="fa-solid fa-trash-can"></i> Hapus Kasus
                 </button>
               </div>

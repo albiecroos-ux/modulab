@@ -28,7 +28,7 @@ export function renderSavedModulesBar() {
             <i class="fa-solid fa-file-lines"></i>
             <span>${escapeHtml(m.title || 'Modul Tanpa Judul')}</span>
           </button>
-          <button type="button" onclick="deleteModuleById('${id}')" class="ml-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold flex items-center gap-1 transition" title="Hapus Modul Ini">
+          <button type="button" onclick="deleteModuleById('${id}')" class="admin-only ml-1 px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold flex items-center gap-1 transition" title="Hapus Modul Ini">
             <i class="fa-solid fa-trash-can"></i> Hapus
           </button>
         </div>

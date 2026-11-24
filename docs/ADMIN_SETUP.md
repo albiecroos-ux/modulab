@@ -1,98 +1,55 @@
-# Setup Admin & Supabase (Manual)
+# Panduan Setup Administrator MODULAB
 
-Langkah ini dijalankan sekali oleh admin di dashboard Supabase.
+Panduan langkah demi langkah untuk konfigurasi awal Supabase dan Vercel sesuai alur pendaftaran mandiri dan persetujuan admin.
 
-## 1. Jalankan migrasi
+## 1. Buat Akun Admin Pertama di Supabase Dashboard
+Sebelum mengaktifkan aturan password server, buat akun administrator tunggal:
+1. Buka **Supabase Dashboard → Authentication → Users**.
+2. Klik tombol **Add user** → **Create user**:
+   - **Email:** `adminmodullab@ui.ac.id`
+   - **Password:** Masukkan kata sandi awal yang telah ditentukan pemilik proyek.
+   - **Auto Confirm User:** Centang opsi ini.
+3. Klik **Create user**.
 
-Buka **Supabase → SQL Editor**, lalu jalankan berurutan:
+> [!WARNING]
+> Segera ganti kata sandi awal admin ke kata sandi kuat yang memenuhi seluruh aturan keamanan setelah setup selesai (melalui menu Profil Saya atau Supabase Dashboard).
 
-1. `supabase/migrations/0001_schema.sql`
-2. `supabase/migrations/0002_rls.sql`
-3. `supabase/migrations/0003_auth_trigger.sql`
-4. `supabase/migrations/0004_storage.sql`
-5. `supabase/migrations/0005_realtime.sql`
-6. `supabase/migrations/0006_seed.sql` (opsional, data contoh)
+## 2. Jalankan File Migrasi Database
+Buka **Supabase Dashboard → SQL Editor**, lalu jalankan berurutan:
+1. `supabase/migrations/0007_roles_approval.sql`
+   *(Mengubah role member menjadi user, mengunci admin tunggal `adminmodullab@ui.ac.id`, dan mengaktifkan trigger pending).*
+2. `supabase/migrations/0008_rls_readonly.sql`
+   *(Mengatur RLS: baca untuk admin & user, operasi tulis hanya untuk admin).*
+3. `supabase/migrations/0009_audit_realtime.sql`
+   *(Membuat tabel audit_logs, fungsi admin_delete_user, dan Realtime publication untuk profiles).*
 
-Atau dengan Supabase CLI: `supabase db push` (butuh project ter-link).
+## 3. Konfigurasi Autentikasi Supabase
+1. **Providers → Email:**
+   - Aktifkan **Email**.
+   - Matikan **Confirm email** (verifikasi email dimatikan karena admin adalah gerbang persetujuan ACC).
+   - Aktifkan **Allow new users to sign up**.
+2. **Password Protection:**
+   - **Minimum password length:** 12 karakter.
+   - Centang kewajiban: **Lowercase**, **Uppercase**, **Digits**, dan **Symbols**.
+   - Aktifkan *Leaked password protection* jika plan Supabase mendukung (Pro).
+3. **URL Configuration:**
+   - **Site URL:** `https://modulab-6.vercel.app`
+   - **Redirect URLs:**
+     - `https://modulab-6.vercel.app`
+     - `https://modulab-6.vercel.app/**`
+     - `http://localhost:5173`
+     - `http://localhost:5173/**`
 
-## 2. Daftarkan email admin pertama
+## 4. Konfigurasi Vercel (Produksi)
+1. Buka [Vercel Dashboard](https://vercel.com) → Proyek **modulab-6**.
+2. Masuk ke **Settings → Environment Variables**:
+   - Tambahkan `VITE_SUPABASE_URL` dengan URL proyek Supabase Anda.
+   - Tambahkan `VITE_SUPABASE_ANON_KEY` dengan Anon/Publishable key Supabase Anda.
+3. Lakukan redeploy atau dorong commit terbaru ke branch `main`.
 
-Di SQL Editor:
-
-```sql
-insert into public.allowed_emails (email, role)
-values ('admin@contoh.ac.id', 'admin')
-on conflict (email) do update set role = 'admin';
-```
-
-Ganti dengan email admin yang sebenarnya (huruf kecil).
-
-## 3. Buat akun admin
-
-Pilih salah satu:
-
-- **Dashboard:** Authentication → Users → **Add user** → isi email yang sama →
-  centang "Auto Confirm User". Trigger `handle_new_user` otomatis membuat
-  `profiles` dengan role `admin`.
-- **Aplikasi:** buka aplikasi → Daftar dengan email tersebut → login. Email lain
-  yang tidak ada di `allowed_emails` akan menjadi `pending`.
-
-Setelah akun ada, cek:
-
-```sql
-select id, email, role from public.profiles order by created_at;
-```
-
-Role admin harus `admin`. Bila masih `pending`, jalankan manual:
-
-```sql
-update public.profiles p
-set role = 'admin'
-from public.allowed_emails a
-where lower(p.email) = a.email and a.role = 'admin';
-```
-
-## 4. Atur Auth URL
-
-**Authentication → URL Configuration**:
-
-- Site URL: `http://localhost:5173` (dev) atau domain produksi.
-- Redirect URLs: tambahkan `http://localhost:5173/**` dan domain produksi
-  (mis. `https://labassist.example.com/**`).
-
-**Authentication → Providers → Email**: aktifkan Email/Password.
-Pendaftaran email lain tetap boleh terbuka; mereka hanya mendapat role
-`pending` dan tidak bisa membaca data. Bila ingin menutup pendaftaran sama
-sekali setelah semua anggota dibuat, nonaktifkan "Allow new users to sign up"
-di **Authentication → Sign In / Providers**.
-
-## 5. Storage
-
-Migrasi `0004` membuat bucket privat `lab-media` beserta policy. Tidak perlu
-membuat bucket manual. Pastikan **Storage → lab-media** berstatus *Private*.
-
-## 6. Kunci API
-
-- Frontend hanya memakai **Project URL** + **anon/publishable key**.
-- **service_role key** hanya boleh dipakai di server/dashboard, tidak pernah
-  di `.env` frontend, repo, atau log.
-
-## 7. Tambah anggota
-
-Masuk sebagai admin → menu **Anggota**:
-
-1. Tambahkan email anggota dengan role `member` (atau `admin`).
-2. Minta anggota mendaftar memakai email tersebut.
-3. Bila akun sudah ada tetapi masih `pending`, menambahkan email ke daftar
-   otomatis menaikkan role (trigger `sync_allowed_email_role`).
-4. Admin dapat mengubah role lewat tombol **Ubah Role** di panel Anggota.
-
-## 8. Impor data lama
-
-Masuk sebagai admin → menu **Anggota** → **Impor Data Lama**. Fitur membaca
-`public.labassist_shared_state` (bila tabel lama masih ada) dan/atau
-`localStorage` browser admin, lalu memindahkan media base64 ke Storage.
-Aman dijalankan berulang (idempoten lewat `legacy_id`).
-
-> Tabel lama `labassist_shared_state` tidak dihapus otomatis. Hapus manual
-> hanya setelah impor diverifikasi.
+## 5. Alur Persetujuan Anggota Baru
+1. Mahasiswa / praktikan mendaftar mandiri melalui tautan **Daftar Akun Baru** (`#/daftar`).
+2. Setelah form dikirim, akun berstatus `pending` dan menampilkan layar **Menunggu Persetujuan Admin** (`#/menunggu`).
+3. Admin masuk ke portal (`#/admin/login`), membuka menu **Anggota & Akses** di tab **Menunggu**.
+4. Admin menekan tombol **Setujui** (role menjadi `user`) atau **Tolak** (role menjadi `rejected`).
+5. Layar pengguna yang sedang menunggu akan langsung terbuka ke aplikasi utama secara Realtime tanpa perlu memuat ulang browser.

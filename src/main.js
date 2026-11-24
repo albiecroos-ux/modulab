@@ -1,4 +1,17 @@
 import { supabase, isSupabaseConfigured } from './lib/supabase.js';
+import { getHashPath, navigate, onRoute } from './lib/router.js';
+import { sessionState, initSession, clearSession, onSessionChange, refreshProfile } from './lib/session.js';
+import { checkRouteAccess } from './lib/guard.js';
+import { renderLanding } from './views/auth/landing.js';
+import { renderLoginUser } from './views/auth/login-user.js';
+import { renderLoginAdmin } from './views/auth/login-admin.js';
+import { renderRegister } from './views/auth/register.js';
+import { renderForgot } from './views/auth/forgot.js';
+import { renderReset } from './views/auth/reset.js';
+import { renderPending } from './views/auth/pending.js';
+import { renderRejected } from './views/auth/rejected.js';
+import { renderProfile } from './views/profile.js';
+import { renderMembersView, cleanupMembersRealtime } from './views/admin/members.js';
 import {
   parseYoutubeEmbed,
   isSafeHttpUrl,
@@ -74,8 +87,22 @@ function throwIfError(result, context) {
 
 function reportError(context, error) {
   console.error(context, error);
-  showToast(`${context}: ${error?.message || error}`);
+  const msg = error?.message || String(error);
+  if (msg.includes('row-level security') || msg.includes('policy') || msg.includes('permission denied')) {
+    showToast('Kamu hanya punya akses lihat.');
+  } else {
+    showToast(`${context}: ${msg}`);
+  }
   setSyncStatus(context, true);
+}
+
+function ensureAdmin() {
+  const role = sessionState.role || state.profile?.role;
+  if (role !== 'admin') {
+    showToast('Kamu hanya punya akses lihat.');
+    return false;
+  }
+  return true;
 }
 
 async function runWithStatus(action, context) {
@@ -130,18 +157,18 @@ function viewContent(type, id) {
     content = `
       ${detailField('Estimasi waktu', item.duration)}
       ${detailField('Tujuan praktikum', item.goal)}
-      ${detailField('Alat / perangkat lunak', tools.join(', '))}
+      ${detailField('Alat dan Bahan', tools.join(', '))}
       <section class="space-y-3">
         <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Langkah kerja</h3>
         ${(item.steps || []).length
-          ? item.steps.map((step, index) => `
+        ? item.steps.map((step, index) => `
             <div class="rounded-xl border border-slate-200 bg-white/80 p-3">
               <p class="font-semibold text-slate-800">${index + 1}. ${escapeHtml(step.instruction || '(Instruksi belum diisi)')}</p>
               ${step.tip ? `<p class="mt-2 text-xs text-amber-900"><strong>Tips:</strong> ${escapeHtml(step.tip)}</p>` : ''}
               ${step.mediaUrl ? renderMediaAttachmentBlock(step.mediaType, step.mediaPreviewUrl || step.mediaUrl, step.mediaName) : ''}
             </div>
           `).join('')
-          : '<p class="text-slate-500">Belum ada langkah kerja.</p>'}
+        : '<p class="text-slate-500">Belum ada langkah kerja.</p>'}
       </section>
       ${(item.attachments || []).length
         ? `<section class="space-y-2"><h3 class="text-xs font-bold uppercase tracking-wide text-slate-500">Lampiran</h3>${item.attachments.map((attachment) => renderMediaAttachmentBlock(attachment.type, attachment.previewUrl || attachment.url, attachment.name)).join('')}</section>`
@@ -304,35 +331,124 @@ async function handleAuthSubmit(event) {
   }
 }
 
-function toggleAuthMode() {
-  authMode = authMode === 'signin' ? 'signup' : 'signin';
-  updateAuthMode();
-}
-
-function setAuthScreenVisible(visible) {
-  const el = document.getElementById('auth-screen');
-  if (el) el.style.display = visible ? 'flex' : 'none';
-}
-
-function setPendingScreenVisible(visible) {
-  const el = document.getElementById('pending-screen');
-  if (el) el.style.display = visible ? 'flex' : 'none';
-}
-
-function showPendingScreen(user) {
-  setAuthScreenVisible(false);
-  setPendingScreenVisible(true);
-  const email = document.getElementById('pending-email');
-  if (email) email.textContent = user?.email || '';
-  setSyncStatus('Menunggu persetujuan admin');
-}
-
 function applyRoleVisibility() {
-  const isAdmin = state.profile?.role === 'admin';
+  const role = sessionState.role || state.profile?.role;
+  const isAdmin = role === 'admin';
+  document.body.classList.toggle('is-readonly', !isAdmin);
   const navMembers = document.getElementById('nav-members');
   const resetButton = document.getElementById('btn-reset-default');
   if (navMembers) navMembers.style.display = isAdmin ? '' : 'none';
   if (resetButton) resetButton.style.display = isAdmin ? '' : 'none';
+}
+
+function handleSwitchTab(tabId) {
+  const role = sessionState.role || state.profile?.role;
+  if (tabId === 'members') {
+    if (role !== 'admin') {
+      showToast('Kamu hanya punya akses lihat.');
+      switchTab('dashboard');
+      return;
+    }
+    const container = document.getElementById('tab-members');
+    if (container) renderMembersView(container);
+  } else {
+    cleanupMembersRealtime();
+  }
+  switchTab(tabId);
+}
+
+function renderRoute(path) {
+  const normalizedPath = path || getHashPath();
+  const authRoot = document.getElementById('auth-root');
+  const profileRoot = document.getElementById('profile-root');
+  const appShell = document.getElementById('app-shell');
+
+  const access = checkRouteAccess(normalizedPath);
+
+  if (access.loading) {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      authRoot.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4 bg-slate-900 text-white">
+          <div class="text-center space-y-3">
+            <i class="fa-solid fa-circle-notch fa-spin text-3xl text-primary-500"></i>
+            <p class="text-xs text-slate-400">Memuat MODULAB…</p>
+          </div>
+        </div>
+      `;
+    }
+    if (profileRoot) profileRoot.classList.add('hidden');
+    if (appShell) appShell.classList.add('hidden');
+    return;
+  }
+
+  if (access.redirect) {
+    navigate(access.redirect);
+    return;
+  }
+
+  if (authRoot) authRoot.classList.add('hidden');
+  if (profileRoot) profileRoot.classList.add('hidden');
+  if (appShell) appShell.classList.add('hidden');
+
+  if (normalizedPath === '#/' || normalizedPath === '') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderLanding(authRoot);
+    }
+  } else if (normalizedPath === '#/login') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderLoginUser(authRoot);
+    }
+  } else if (normalizedPath === '#/admin/login') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderLoginAdmin(authRoot);
+    }
+  } else if (normalizedPath === '#/daftar') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderRegister(authRoot);
+    }
+  } else if (normalizedPath === '#/lupa-password') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderForgot(authRoot);
+    }
+  } else if (normalizedPath === '#/reset-password') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderReset(authRoot);
+    }
+  } else if (normalizedPath === '#/menunggu') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderPending(authRoot);
+    }
+  } else if (normalizedPath === '#/ditolak') {
+    if (authRoot) {
+      authRoot.classList.remove('hidden');
+      renderRejected(authRoot);
+    }
+  } else if (normalizedPath === '#/profil') {
+    if (profileRoot) {
+      profileRoot.classList.remove('hidden');
+      renderProfile(profileRoot);
+    }
+  } else {
+    // #/app
+    if (appShell) appShell.classList.remove('hidden');
+    applyRoleVisibility();
+    const accountEmail = document.getElementById('account-email');
+    const accountRole = document.getElementById('account-role');
+    if (accountEmail) accountEmail.textContent = sessionState.user?.email || '';
+    if (accountRole) accountRole.textContent = roleLabel(sessionState.role);
+
+    if (sessionState.user && (!state.user || state.user.id !== sessionState.user.id)) {
+      boot(sessionState.user);
+    }
+  }
 }
 
 async function boot(user) {
@@ -343,12 +459,7 @@ async function boot(user) {
   if (!profile) {
     await authService.signOut();
     state.user = null;
-    setAuthScreenVisible(true);
-    setPendingScreenVisible(false);
-    setAuthMessage(
-      'Profil akun tidak ditemukan. Pastikan migrasi 0003_auth_trigger.sql sudah dijalankan di Supabase.',
-      true
-    );
+    navigate('#/');
     return;
   }
 
@@ -359,12 +470,14 @@ async function boot(user) {
   if (accountRole) accountRole.textContent = roleLabel(profile.role);
 
   if (profile.role === 'pending') {
-    showPendingScreen(user);
+    navigate('#/menunggu');
+    return;
+  }
+  if (profile.role === 'rejected') {
+    navigate('#/ditolak');
     return;
   }
 
-  setAuthScreenVisible(false);
-  setPendingScreenVisible(false);
   applyRoleVisibility();
   switchTab('dashboard');
   setSyncStatus('Memuat data…');
@@ -386,28 +499,22 @@ function handleSignedOut() {
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
-  setAuthScreenVisible(true);
-  setPendingScreenVisible(false);
   applyRoleVisibility();
   const accountEmail = document.getElementById('account-email');
   if (accountEmail) accountEmail.textContent = '';
   const accountRole = document.getElementById('account-role');
   if (accountRole) accountRole.textContent = '';
   setSyncStatus('Belum tersambung');
-  const password = document.getElementById('auth-password');
-  if (password) password.value = '';
+  navigate('#/');
 }
 
 async function signOut() {
   try {
-    const result = await authService.signOut();
-    if (result.error) throw result.error;
+    await clearSession();
   } catch (error) {
     showToast(`Gagal keluar: ${error.message || 'Periksa koneksi Supabase.'}`);
-    return;
   }
   handleSignedOut();
-  setAuthMessage('Anda telah keluar.');
 }
 
 // ---------------------------------------------------------------------------
@@ -488,6 +595,7 @@ document.addEventListener('focusout', () => {
 // Module builder
 // ---------------------------------------------------------------------------
 async function createNewModule() {
+  if (!ensureAdmin()) return;
   const created = await runWithStatus(async () => {
     const id = throwIfError(
       await modulesService.createModule({
@@ -521,6 +629,7 @@ function selectModuleById(id) {
 }
 
 async function deleteModuleById(id) {
+  if (!ensureAdmin()) return;
   const target = state.modules.find((m) => m.id === id);
   if (!target) return;
   const snapshot = JSON.parse(JSON.stringify(target));
@@ -555,6 +664,7 @@ function deleteActiveModule() {
 }
 
 function syncActiveModuleFromForm() {
+  if (!ensureAdmin()) return;
   let mod = getActiveModule();
   if (!mod) {
     createNewModule().then(() => syncActiveModuleFromForm());
@@ -576,6 +686,7 @@ function syncActiveModuleFromForm() {
 }
 
 async function saveCurrentModule() {
+  if (!ensureAdmin()) return;
   const mod = getActiveModule();
   if (!mod) {
     await createNewModule();
@@ -606,6 +717,7 @@ async function saveCurrentModule() {
 }
 
 async function handleModuleFilesUpload(event) {
+  if (!ensureAdmin()) return;
   let mod = getActiveModule();
   if (!mod) {
     await createNewModule();
@@ -657,6 +769,7 @@ async function handleModuleFilesUpload(event) {
 }
 
 async function addModuleLinkAttachment() {
+  if (!ensureAdmin()) return;
   const urlInput = document.getElementById('mod-attachment-url');
   const rawUrl = urlInput.value.trim();
   if (!rawUrl) {
@@ -678,10 +791,10 @@ async function addModuleLinkAttachment() {
   const ytEmbed = parseYoutubeEmbed(rawUrl);
   const payload = ytEmbed
     ? {
-        name: 'Video Tutorial YouTube (' + rawUrl + ')',
-        type: 'youtube',
-        url: ytEmbed
-      }
+      name: 'Video Tutorial YouTube (' + rawUrl + ')',
+      type: 'youtube',
+      url: ytEmbed
+    }
     : { name: rawUrl, type: 'link', url: rawUrl };
 
   try {
@@ -701,6 +814,7 @@ async function addModuleLinkAttachment() {
 }
 
 async function deleteModuleAttachment(attId) {
+  if (!ensureAdmin()) return;
   const mod = getActiveModule();
   if (!mod) return;
   const att = mod.attachments.find((a) => a.id === attId);
@@ -732,6 +846,7 @@ async function deleteModuleAttachment(attId) {
 }
 
 async function addStepToActiveModule() {
+  if (!ensureAdmin()) return;
   let mod = getActiveModule();
   if (!mod) {
     await createNewModule();
@@ -767,6 +882,7 @@ async function addStepToActiveModule() {
 }
 
 function updateStepField(idx, field, value) {
+  if (!ensureAdmin()) return;
   const mod = getActiveModule();
   if (!mod || !mod.steps[idx]) return;
   mod.steps[idx][field] = value;
@@ -778,6 +894,7 @@ function updateStepField(idx, field, value) {
 }
 
 async function deleteStepFromActiveModule(idx) {
+  if (!ensureAdmin()) return;
   const mod = getActiveModule();
   if (!mod || !mod.steps[idx]) return;
   const step = mod.steps[idx];
@@ -809,6 +926,7 @@ async function deleteStepFromActiveModule(idx) {
 }
 
 async function handleStepMediaUpload(event, idx) {
+  if (!ensureAdmin()) return;
   const file = event.target.files?.[0];
   event.target.value = '';
   const mod = getActiveModule();
@@ -841,6 +959,7 @@ async function handleStepMediaUpload(event, idx) {
 }
 
 async function deleteStepMedia(idx) {
+  if (!ensureAdmin()) return;
   const mod = getActiveModule();
   if (!mod || !mod.steps[idx]) return;
   const step = mod.steps[idx];
@@ -900,6 +1019,7 @@ function closeTroubleForm() {
 }
 
 async function handleTroubleMediaSelect(event) {
+  if (!ensureAdmin()) return;
   const file = event.target.files?.[0];
   if (!file) return;
   setSyncStatus('Mengunggah media…');
@@ -950,9 +1070,8 @@ function editTroubleshootingItem(id) {
   };
 
   if (tempTroubleMedia.mediaUrl) {
-    document.getElementById('tr-media-name').textContent = `Terlampir: ${
-      tempTroubleMedia.mediaName || 'Media Solusi'
-    }`;
+    document.getElementById('tr-media-name').textContent = `Terlampir: ${tempTroubleMedia.mediaName || 'Media Solusi'
+      }`;
     document.getElementById('tr-media-badge').classList.remove('hidden');
   } else {
     document.getElementById('tr-media-badge').classList.add('hidden');
@@ -963,6 +1082,7 @@ function editTroubleshootingItem(id) {
 }
 
 async function saveTroubleshootingItem() {
+  if (!ensureAdmin()) return;
   const editId = document.getElementById('tr-edit-id').value;
   const symptom = document.getElementById('tr-symptom').value.trim();
   const category = document.getElementById('tr-category').value;
@@ -1019,6 +1139,7 @@ async function saveTroubleshootingItem() {
 }
 
 async function deleteTroubleshootingItem(id) {
+  if (!ensureAdmin()) return;
   const target = state.troubleshooting.find((t) => t.id === id);
   if (!target) return;
   const deleted = await runWithStatus(
@@ -1042,6 +1163,10 @@ async function deleteTroubleshootingItem(id) {
 // Checklist
 // ---------------------------------------------------------------------------
 async function toggleCheckItem(id) {
+  if (!ensureAdmin()) {
+    renderChecklist();
+    return;
+  }
   const item = state.checklist.find((i) => i.id === id);
   if (!item) return;
   item.checked = !item.checked;
@@ -1059,6 +1184,7 @@ async function toggleCheckItem(id) {
 }
 
 async function saveChecklistItem() {
+  if (!ensureAdmin()) return;
   const editId = document.getElementById('check-edit-id').value;
   const input = document.getElementById('new-check-input');
   const text = input.value.trim();
@@ -1106,6 +1232,7 @@ function cancelCheckEdit() {
 }
 
 async function deleteChecklistItem(id) {
+  if (!ensureAdmin()) return;
   const target = state.checklist.find((i) => i.id === id);
   if (!target) return;
   const deleted = await runWithStatus(
@@ -1124,6 +1251,7 @@ async function deleteChecklistItem(id) {
 }
 
 async function deleteCompletedChecklist() {
+  if (!ensureAdmin()) return;
   const completed = state.checklist.filter((i) => i.checked);
   if (completed.length === 0) {
     showToast('Tidak ada item checklist selesai untuk dihapus.');
@@ -1145,6 +1273,7 @@ async function deleteCompletedChecklist() {
 }
 
 async function resetChecklist() {
+  if (!ensureAdmin()) return;
   const updated = await runWithStatus(
     () => checklistService.resetChecked(),
     'Gagal mereset checklist'
@@ -1161,6 +1290,7 @@ async function resetChecklist() {
 // Evaluations
 // ---------------------------------------------------------------------------
 async function handleEvalMediaSelect(event) {
+  if (!ensureAdmin()) return;
   const file = event.target.files?.[0];
   if (!file) return;
   setSyncStatus('Mengunggah media…');
@@ -1189,6 +1319,7 @@ function clearEvalTempMedia() {
 }
 
 async function saveEvaluationLog() {
+  if (!ensureAdmin()) return;
   const editId = document.getElementById('eval-edit-id').value;
   const session = document.getElementById('eval-session').value.trim();
   const confused = document.getElementById('eval-confused').value.trim();
@@ -1272,6 +1403,7 @@ function cancelEvalEdit() {
 }
 
 async function deleteEvaluationLog(id) {
+  if (!ensureAdmin()) return;
   const target = state.evalLogs.find((l) => l.id === id);
   if (!target) return;
   const deleted = await runWithStatus(
@@ -1583,12 +1715,10 @@ const updateDashboardAndStats = renderDashboard;
 function exposeHandlers() {
   Object.assign(window, {
     // layout & auth
-    switchTab,
+    switchTab: handleSwitchTab,
     toggleMobileMenu,
     viewContent,
     closeDetailModal,
-    toggleAuthMode,
-    handleAuthSubmit,
     signOut,
     undoLastDelete,
     // modules
@@ -1652,37 +1782,31 @@ async function init() {
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') closeDetailModal();
   });
-  document.getElementById('auth-form')?.addEventListener('submit', handleAuthSubmit);
-  document.getElementById('auth-toggle-mode')?.addEventListener('click', toggleAuthMode);
-  updateAuthMode();
 
-  if (!isSupabaseConfigured) {
-    const warning = document.getElementById('auth-config-warning');
-    if (warning) {
-      warning.textContent =
-        'Backend belum dikonfigurasi. Isi VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di file .env, lalu jalankan ulang dev server.';
-      warning.classList.remove('hidden');
-    }
-    document.getElementById('auth-form')?.classList.add('hidden');
-    document.getElementById('auth-toggle-mode')?.classList.add('hidden');
-    return;
-  }
-
-  authService.onAuthStateChange((event) => {
-    if (event === 'SIGNED_OUT') handleSignedOut();
+  onRoute((path) => {
+    renderRoute(path);
   });
 
-  try {
-    const session = throwIfError(await authService.getSession(), 'membaca sesi');
-    if (session?.user) await boot(session.user);
-  } catch (error) {
-    setAuthScreenVisible(true);
-    setPendingScreenVisible(false);
-    setAuthMessage(
-      `Gagal menyambungkan ke Supabase: ${error.message || 'Periksa konfigurasi dan koneksi.'}`,
-      true
-    );
-  }
+  onSessionChange((currSession) => {
+    state.user = currSession.user;
+    state.profile = currSession.profile;
+    applyRoleVisibility();
+
+    const currentPath = getHashPath();
+    if (currSession.role === 'user' && currentPath === '#/menunggu') {
+      showToast('Akun Anda telah disetujui! Mengalihkan ke aplikasi…');
+      navigate('#/app');
+    } else if (currSession.role === 'rejected' && currentPath === '#/menunggu') {
+      navigate('#/ditolak');
+    } else if ((currSession.role === 'pending' || currSession.role === 'rejected') && currentPath.startsWith('#/app')) {
+      navigate(currSession.role === 'pending' ? '#/menunggu' : '#/ditolak');
+    } else {
+      renderRoute(currentPath);
+    }
+  });
+
+  await initSession();
+  renderRoute(getHashPath());
 }
 
 init();

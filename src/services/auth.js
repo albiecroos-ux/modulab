@@ -1,3 +1,6 @@
+// src/services/auth.js
+// Layanan autentikasi menggunakan Supabase Auth.
+
 import { supabase } from '../lib/supabase.js';
 
 export async function getSession() {
@@ -22,10 +25,18 @@ export async function signIn(email, password) {
   }
 }
 
-export async function signUp(email, password) {
+export async function signUp(email, password, fullName = '') {
   if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
   try {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName.trim()
+        }
+      }
+    });
     if (error) throw error;
     return { data, error: null };
   } catch (error) {
@@ -49,9 +60,35 @@ export async function getProfile(userId) {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, email, role')
+      .select('id, email, role, full_name, reviewed_by, reviewed_at, rejection_reason, created_at, updated_at')
       .eq('id', userId)
       .maybeSingle();
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
+export async function resetPasswordForEmail(email, redirectTo) {
+  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
+  try {
+    const options = {};
+    if (redirectTo) {
+      options.redirectTo = redirectTo;
+    }
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, options);
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
+export async function updateUserPassword(password) {
+  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
+  try {
+    const { data, error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
     return { data, error: null };
   } catch (error) {

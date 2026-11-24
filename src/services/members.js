@@ -1,13 +1,21 @@
+// src/services/members.js
+// Layanan manajemen profil pengguna dan persetujuan admin.
+
 import { supabase } from '../lib/supabase.js';
-import { normalizeEmail } from '../state.js';
 
-export async function listMembers() {
+export async function listProfiles(roleFilter = null) {
   if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('profiles')
-      .select('id, email, role, created_at')
-      .order('created_at', { ascending: true });
+      .select('id, email, full_name, role, created_at, reviewed_at, reviewed_by, rejection_reason')
+      .order('created_at', { ascending: false });
+
+    if (roleFilter) {
+      query = query.eq('role', roleFilter);
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return { data: data || [], error: null };
   } catch (error) {
@@ -15,65 +23,77 @@ export async function listMembers() {
   }
 }
 
-export async function updateMemberRole(id, role) {
-  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
-  if (!['admin', 'member', 'pending'].includes(role)) {
-    return { data: null, error: new Error('Role tidak valid.') };
-  }
-  try {
-    const { error } = await supabase.from('profiles').update({ role }).eq('id', id);
-    if (error) throw error;
-    return { data: true, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
+export async function approveUser(id) {
+  return setUserRole(id, 'user');
 }
 
-export async function listAllowedEmails() {
-  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
-  try {
-    const { data, error } = await supabase
-      .from('allowed_emails')
-      .select('email, role, created_at')
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    return { data: data || [], error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
-}
-
-export async function addAllowedEmail(email, role, userId) {
-  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
-  const normalized = normalizeEmail(email);
-  if (!normalized || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalized)) {
-    return { data: null, error: new Error('Format email tidak valid.') };
-  }
-  if (!['admin', 'member'].includes(role)) {
-    return { data: null, error: new Error('Role harus admin atau member.') };
-  }
-  try {
-    const { error } = await supabase.from('allowed_emails').upsert(
-      { email: normalized, role, created_by: userId || null },
-      { onConflict: 'email' }
-    );
-    if (error) throw error;
-    return { data: true, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
-}
-
-export async function removeAllowedEmail(email) {
+export async function rejectUser(id, reason = '') {
   if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
   try {
     const { error } = await supabase
-      .from('allowed_emails')
-      .delete()
-      .eq('email', normalizeEmail(email));
+      .from('profiles')
+      .update({
+        role: 'rejected',
+        rejection_reason: reason.trim()
+      })
+      .eq('id', id);
     if (error) throw error;
     return { data: true, error: null };
   } catch (error) {
     return { data: null, error };
   }
+}
+
+export async function setUserRole(id, role) {
+  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
+  if (!['admin', 'user', 'pending', 'rejected'].includes(role)) {
+    return { data: null, error: new Error('Role tidak valid.') };
+  }
+  try {
+    const updateData = { role };
+    if (role !== 'rejected') {
+      updateData.rejection_reason = '';
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', id);
+    if (error) throw error;
+    return { data: true, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
+export async function deleteUser(id) {
+  if (!supabase) return { data: null, error: new Error('Supabase belum dikonfigurasi.') };
+  try {
+    // Memanggil fungsi RPC security definer admin_delete_user
+    const { data, error } = await supabase.rpc('admin_delete_user', { p_user_id: id });
+    if (error) throw error;
+    return { data: data || true, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
+// Kompatibilitas mundur fungsi allowed_emails lama (deprecated)
+export async function listMembers() {
+  return listProfiles();
+}
+
+export async function updateMemberRole(id, role) {
+  return setUserRole(id, role);
+}
+
+export async function listAllowedEmails() {
+  return { data: [], error: null };
+}
+
+export async function addAllowedEmail() {
+  return { data: null, error: new Error('Fitur allowed_emails sudah digantikan dengan alur persetujuan admin.') };
+}
+
+export async function removeAllowedEmail() {
+  return { data: null, error: new Error('Fitur allowed_emails sudah digantikan dengan alur persetujuan admin.') };
 }
