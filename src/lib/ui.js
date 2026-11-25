@@ -10,6 +10,16 @@ export function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+export function formatListText(text) {
+  if (!text) return '';
+  const str = String(text);
+  // Bila tidak ada baris baru manual, pisahkan penomoran berurutan (misal " 2. ", " 3. ") ke baris baru
+  if (!str.includes('\n')) {
+    return str.replace(/\s+(\d+\.\s)/g, '\n$1');
+  }
+  return str;
+}
+
 export function isSafeHttpUrl(value) {
   if (!value) return false;
   try {

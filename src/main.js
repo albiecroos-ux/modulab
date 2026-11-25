@@ -24,7 +24,8 @@ import {
   setUndoAction,
   roleLabel,
   escapeHtml,
-  renderMediaAttachmentBlock
+  renderMediaAttachmentBlock,
+  formatListText
 } from './lib/ui.js';
 import * as authService from './services/auth.js';
 import * as modulesService from './services/modules.js';
@@ -128,7 +129,7 @@ function detailField(label, value) {
   return `
     <div>
       <h3 class="mb-1 text-xs font-bold uppercase tracking-wide text-slate-500">${escapeHtml(label)}</h3>
-      <p class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(value || '-')}</p>
+      <p class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(formatListText(value || '-'))}</p>
     </div>
   `;
 }
@@ -163,8 +164,8 @@ function viewContent(type, id) {
         ${(item.steps || []).length
         ? item.steps.map((step, index) => `
             <div class="rounded-xl border border-slate-200 bg-white/80 p-3">
-              <p class="font-semibold text-slate-800">${index + 1}. ${escapeHtml(step.instruction || '(Instruksi belum diisi)')}</p>
-              ${step.tip ? `<p class="mt-2 text-xs text-amber-900"><strong>Tips:</strong> ${escapeHtml(step.tip)}</p>` : ''}
+              <p class="font-semibold text-slate-800 whitespace-pre-line">${index + 1}. ${escapeHtml(formatListText(step.instruction || '(Instruksi belum diisi)'))}</p>
+              ${step.tip ? `<p class="mt-2 text-xs text-amber-900 whitespace-pre-line"><strong>Tips:</strong> ${escapeHtml(formatListText(step.tip))}</p>` : ''}
               ${step.mediaUrl ? renderMediaAttachmentBlock(step.mediaType, step.mediaPreviewUrl || step.mediaUrl, step.mediaName) : ''}
             </div>
           `).join('')

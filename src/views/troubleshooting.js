@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { escapeHtml, renderMediaAttachmentBlock } from '../lib/ui.js';
+import { escapeHtml, renderMediaAttachmentBlock, formatListText } from '../lib/ui.js';
 
 export function renderTroubleshooting() {
   const query = (document.getElementById('search-trouble')?.value || '').toLowerCase();
@@ -46,9 +46,9 @@ export function renderTroubleshooting() {
             <h4 class="font-bold text-slate-800 text-sm leading-snug mb-3">
               <i class="fa-solid fa-triangle-exclamation text-rose-500 mr-1.5"></i>"${escapeHtml(item.symptom)}"
             </h4>
-            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 mb-3">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-100 text-xs text-slate-600 mb-3 whitespace-pre-line">
               <strong class="text-slate-700 block mb-0.5">Penyebab Utama:</strong>
-              ${escapeHtml(item.cause)}
+              ${escapeHtml(formatListText(item.cause))}
             </div>
           </div>
           <div class="space-y-2">
@@ -56,7 +56,7 @@ export function renderTroubleshooting() {
               <strong class="text-emerald-800 flex items-center mb-1">
                 <i class="fa-solid fa-circle-check text-emerald-600 mr-1.5"></i>Cara Menjelaskan & Solusi Cepat:
               </strong>
-              <p class="leading-relaxed">${escapeHtml(item.solution)}</p>
+              <p class="leading-relaxed whitespace-pre-line">${escapeHtml(formatListText(item.solution))}</p>
             </div>
             ${item.mediaUrl ? renderMediaAttachmentBlock(item.mediaType, item.mediaPreviewUrl || item.mediaUrl, item.mediaName) : ''}
           </div>

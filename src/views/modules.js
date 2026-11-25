@@ -1,5 +1,5 @@
 import { state, getActiveModule } from '../state.js';
-import { escapeHtml, renderMediaAttachmentBlock, showToast } from '../lib/ui.js';
+import { escapeHtml, renderMediaAttachmentBlock, showToast, formatListText } from '../lib/ui.js';
 
 export function renderSavedModulesBar() {
   const bar = document.getElementById('saved-modules-bar');
@@ -190,7 +190,7 @@ export function updateLivePreview() {
 
     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200/70">
       <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Tujuan Praktikum</h4>
-      <p class="text-xs text-slate-700 leading-relaxed">${escapeHtml(mod.goal || '-')}</p>
+      <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line">${escapeHtml(formatListText(mod.goal || '-'))}</p>
     </div>
 
     <div>
@@ -233,13 +233,13 @@ export function updateLivePreview() {
         <div class="p-4 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2.5">
           <div class="flex items-start space-x-3">
             <span class="w-6 h-6 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">${i + 1}</span>
-            <p class="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed">${escapeHtml(s.instruction || '(Instruksi belum diisi)')}</p>
+            <p class="text-xs sm:text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-line">${escapeHtml(formatListText(s.instruction || '(Instruksi belum diisi)'))}</p>
           </div>
           ${s.tip
             ? `
             <div class="ml-9 p-2.5 rounded-lg bg-amber-50 border border-amber-200/80 text-xs text-amber-900 flex items-start space-x-2">
               <i class="fa-solid fa-lightbulb text-amber-500 mt-0.5 shrink-0"></i>
-              <span><strong>Tips Anti-Bingung:</strong> ${escapeHtml(s.tip)}</span>
+              <span class="whitespace-pre-line"><strong>Tips Anti-Bingung:</strong> ${escapeHtml(formatListText(s.tip))}</span>
             </div>
           `
             : ''}
